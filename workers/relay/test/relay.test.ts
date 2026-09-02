@@ -5,6 +5,19 @@ import { randomFriendCode } from "../src/crypto.js";
 import worker from "../src/index.js";
 import { api, becomeFriends, bodyOf, createUser, deviceApi, friendshipResponseBody, makeDeviceRequest, mintCode, nextId, receiptFor } from "./helpers.js";
 
+describe("relay migrations", () => {
+  it("defaults both directions for a friendship created under the initial schema", async () => {
+    const migratedFriendship = await env.DB.prepare(`SELECT a_inbound_allowed, b_inbound_allowed
+      FROM friendships WHERE a_handle = ? AND b_handle = ?`)
+      .bind("migration-alpha", "migration-zulu")
+      .first<{ a_inbound_allowed: number; b_inbound_allowed: number }>();
+    expect(migratedFriendship).toEqual({ a_inbound_allowed: 1, b_inbound_allowed: 1 });
+    await env.DB.prepare("DELETE FROM friendships WHERE a_handle = ? AND b_handle = ?")
+      .bind("migration-alpha", "migration-zulu")
+      .run();
+  });
+});
+
 describe("friend code generation", () => {
   it("uses the Crockford alphabet for every random index", () => {
     const bytes = Uint8Array.from({ length: 32 }, (_, index) => index);
